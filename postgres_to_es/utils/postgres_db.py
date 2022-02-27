@@ -72,12 +72,12 @@ class PGFilmWork(PGConnectorBase):
                    "pfw.role, p.id, p.full_name, g.name "
                    "FROM content.film_work fw "
                    "LEFT JOIN content.person_film_work pfw "
-                   "ON pfw.film_work_id = fw.id"
+                   "ON pfw.film_work_id = fw.id "
                    "LEFT JOIN content.person p "
-                   "ON p.id = pfw.person_id"
+                   "ON p.id = pfw.person_id "
                    "LEFT JOIN content.genre_film_work gfw "
-                   "ON gfw.film_work_id = fw.id"
-                   "LEFT JOIN content.genre g ON g.id = gfw.genre_id"
+                   "ON gfw.film_work_id = fw.id "
+                   "LEFT JOIN content.genre g ON g.id = gfw.genre_id "
                    "WHERE fw.id IN %(films_id)s")
         sql = self.cursor.mogrify(sql_tmp, {'films_id': tuple(film_ids)})
         result = self.query(sql)
@@ -90,8 +90,8 @@ class PGFilmWork(PGConnectorBase):
     ) -> List[RealDictRow]:
         sql_tmp = ("SELECT fw.id FROM content.film_work fw "
                    "LEFT JOIN content.{table}_film_work pfw "
-                   "ON pfw.film_work_id = fw.id"
-                   "WHERE pfw.{table}_id IN %(ids)s"
+                   "ON pfw.film_work_id = fw.id "
+                   "WHERE pfw.{table}_id IN %(ids)s "
                    "ORDER BY fw.modified").format(table=table)
         sql = self.cursor.mogrify(sql_tmp, {'ids': tuple(table_ids)})
         result = self.query(sql)
