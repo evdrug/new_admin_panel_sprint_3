@@ -53,11 +53,11 @@ class RedisStorage(BaseStorage):
         self.db = None
         self.connect()
 
-    @backoff()
+    @backoff(logging=logging)
     def connect(self):
         self.db = Redis(**REDIS_DSL)
 
-    @backoff()
+    @backoff(logging=logging)
     def save_state(self, state: dict) -> None:
         try:
             self.db.mset(state)

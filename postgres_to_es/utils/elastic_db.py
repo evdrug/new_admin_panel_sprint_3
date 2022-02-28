@@ -17,13 +17,16 @@ class ELConnectorBase:
     def __init__(self):
         self.connect()
 
-    @backoff()
+    @backoff(logging=logging)
     def connect(self):
         self.client = Elasticsearch(**EL_DSL)
-        self.client.indices.create(
-            **index_settings_elastic,
-            ignore=400
-        )
+        if not self.client.indices.exists(
+                index=index_settings_elastic['index']
+        ):
+            self.client.indices.create(
+                **index_settings_elastic,
+                ignore=400
+            )
 
     def __del__(self):
         if self.client:
@@ -32,7 +35,7 @@ class ELConnectorBase:
 
 class ELFilm(ELConnectorBase):
 
-    @backoff()
+    @backoff(logging=logging)
     def set_bulk(self, index, data):
         try:
             helpers.bulk(self.client, self.generate_elastic_data(index, data))

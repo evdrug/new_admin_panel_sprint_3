@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from enum import Enum
 
 from dotenv import load_dotenv
 
@@ -53,6 +54,13 @@ REDIS_DSL = {
 
 DEFAULT_UUID = '00000000-0000-0000-0000-000000000000'
 DEFAULT_DATE = datetime(2021, 6, 13, 0, 0, 0).strftime('%Y-%m-%d %H:%M:%S')
+
+
+class PersonRole(Enum):
+    ACTOR = 'actor'
+    WRITER = 'producer'
+    DIRECTOR = 'director'
+
 
 index_settings_elastic = {
     "index": "movies",

@@ -10,27 +10,29 @@ from utils.backoff import backoff
 
 from config import LOG_CONFIG
 from config import PG_DSL
+from config import PersonRole
 
 config.dictConfig(LOG_CONFIG)
 
 
 class PGConnectorBase:
-    def __init__(self):
+    def __init__(self, logging=logging):
         self.db = None
         self.cursor = None
+        self._logging = logging
         self.connect()
 
-    @backoff()
+    @backoff(logging=logging)
     def connect(self) -> None:
         self.db = psycopg2.connect(**PG_DSL, cursor_factory=RealDictCursor)
         self.cursor = self.db.cursor()
 
-    @backoff()
+    @backoff(logging=logging)
     def query(self, sql: str) -> List[RealDictRow]:
         try:
             self.cursor.execute(sql)
         except psycopg2.OperationalError:
-            logging.error('Ошибка подключения к базе postgres')
+            self._logging.error('Ошибка подключения к базе postgres')
             self.connect()
             self.cursor.execute(sql)
         result = self.cursor.fetchall()
@@ -97,10 +99,15 @@ class PGFilmWork(PGConnectorBase):
         result = self.query(sql)
         return result
 
+    # думаю с backoff не очень хорошая идея, застрянем в цикле и ничего не добавим
     def transform(self, films_raw: List[RealDictRow]) -> Dict:
         result = defaultdict(dict)
         for film in films_raw:
-            mv = RawMovies(**film)
+            try:
+                mv = RawMovies(**film)
+            except Exception as e:
+                logging.error(e)
+                continue
             id = mv.fw_id
             data = result[id]
             if not data:
@@ -116,17 +123,20 @@ class PGFilmWork(PGConnectorBase):
 
     @staticmethod
     def __add_role_person(role, data, film):
-        person = Person(**film)
+        try:
+            person = Person(**film)
+        except Exception as e:
+            logging.error(e)
 
-        if role == 'actor':
+        if role == PersonRole.ACTOR:
             if person.name not in data.actors_names:
                 data.actors_names.append(person.name)
                 data.actors.append(person)
 
-        if role == 'producer':
+        if role == PersonRole.WRITER:
             if person.name not in data.writers_names:
                 data.writers_names.append(person.name)
                 data.writers.append(person)
 
-        if role == 'director':
+        if role == PersonRole.DIRECTOR:
             data.director.add(person.name)

@@ -18,11 +18,11 @@ def run_once(fh):
     try:
         fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except Exception:
-        print("скрипт уже запущен!!!")
+        logging.error("скрипт уже запущен!!!")
         os._exit(0)
 
 
-def loader_es(es_client, pg: PGFilmWork, table: dict, es: ELFilm):
+def loader_es(pg: PGFilmWork, table: dict, es: ELFilm):
     table_name = table['name']
     limit = CHUNK_SIZE
     state_table = {}
@@ -38,7 +38,6 @@ def loader_es(es_client, pg: PGFilmWork, table: dict, es: ELFilm):
                                                offset_start):
         date_end = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         offset_start += limit
-
         if table['func_film_id']:
             film_modified_ids = pg.get_film_id_in_table(table_name,
                                                         [item['id'] for item in
@@ -59,6 +58,8 @@ if __name__ == '__main__':
     fh = open(os.path.realpath(__file__), 'r')
     run_once(fh)
     state = State(RedisStorage())
+    pg = PGFilmWork()
+    es = ELFilm()
 
     tables_pg = [
         {'name': 'genre', 'func_film_id': True},
@@ -67,10 +68,7 @@ if __name__ == '__main__':
 
     ]
 
-    pg = PGFilmWork()
-    es = ELFilm()
-
     for table in tables_pg:
         logging.info('start load table {}'.format(table['name']))
-        loader_es('es_client', pg, table, es)
+        loader_es(pg, table, es)
         logging.info('stop load table {}'.format(table['name']))
