@@ -69,6 +69,8 @@ if __name__ == '__main__':
     ]
 
     for table in tables_pg:
+        # да, оно с одной стороны избыточно, но могут быть ситуации когда это
+        # поможет минимизировать пропуск изменяющихся данных
         logging.info('start load table {}'.format(table['name']))
         loader_es(pg, table, es)
         logging.info('stop load table {}'.format(table['name']))
