@@ -4,9 +4,10 @@ import logging
 import os
 from datetime import datetime
 from logging import config
+from time import sleep
 
 from config import DEFAULT_DATE, CHUNK_SIZE
-from config import LOG_CONFIG
+from config import LOG_CONFIG, TUME_TO_RESTART
 from utils.elastic_db import ELFilm
 from utils.postgres_db import PGFilmWork
 from utils.state import State, RedisStorage
@@ -22,7 +23,7 @@ def run_once(fh):
         os._exit(0)
 
 
-def loader_es(pg: PGFilmWork, table: dict, es: ELFilm):
+def loader_es(state: State, pg: PGFilmWork, table: dict, es: ELFilm):
     table_name = table['name']
     limit = CHUNK_SIZE
     state_table = {}
@@ -54,13 +55,7 @@ def loader_es(pg: PGFilmWork, table: dict, es: ELFilm):
     state.set_state(table['name'], json.dumps({'offset': 0, 'date': date_end}))
 
 
-if __name__ == '__main__':
-    fh = open(os.path.realpath(__file__), 'r')
-    run_once(fh)
-    state = State(RedisStorage())
-    pg = PGFilmWork()
-    es = ELFilm()
-
+def process(state: State, pg: PGFilmWork, es: ELFilm) -> None:
     tables_pg = [
         {'name': 'genre', 'func_film_id': True},
         {'name': 'person', 'func_film_id': True},
@@ -71,6 +66,18 @@ if __name__ == '__main__':
     for table in tables_pg:
         # да, оно с одной стороны избыточно, но могут быть ситуации когда это
         # поможет минимизировать пропуск изменяющихся данных
-        logging.info('start load table {}'.format(table['name']))
-        loader_es(pg, table, es)
-        logging.info('stop load table {}'.format(table['name']))
+        logging.info('load table "{}" - start'.format(table['name']))
+        loader_es(state, pg, table, es)
+        logging.info('load table "{}" - success'.format(table['name']))
+
+
+if __name__ == '__main__':
+    fh = open(os.path.realpath(__file__), 'r')
+    run_once(fh)
+    state = State(RedisStorage())
+    pg = PGFilmWork()
+    es = ELFilm()
+
+    while True:
+        process(state, pg, es)
+        sleep(TUME_TO_RESTART)

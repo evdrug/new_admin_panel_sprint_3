@@ -70,7 +70,7 @@ services:
       - el_db
       - redis
       - db
-#    entrypoint: /usr/local/bin/entrypoint.sh
+    command: python main.py
 
   nginx:
     image: nginx:1.21.6-alpine

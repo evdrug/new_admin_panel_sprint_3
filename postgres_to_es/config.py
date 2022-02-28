@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 CHUNK_SIZE = 100
-
+TUME_TO_RESTART = 60
 LEVEL_LOG = 'INFO'
 
 LOG_CONFIG = {
