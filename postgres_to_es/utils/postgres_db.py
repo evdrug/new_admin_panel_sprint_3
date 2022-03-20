@@ -4,7 +4,7 @@ from logging import config
 from typing import List, Dict
 
 import psycopg2
-from models import RawMovies, FilmElastick, Person
+from models import RawMovies, FilmElastick, Person, Genre
 from psycopg2.extras import RealDictCursor, RealDictRow
 from utils.backoff import backoff
 
@@ -71,7 +71,7 @@ class PGFilmWork(PGConnectorBase):
     def get_film_data(self, film_ids: List):
         sql_tmp = ("SELECT fw.id as fw_id, fw.title, fw.description, "
                    "fw.rating, fw.type, fw.created, fw.modified, "
-                   "pfw.role, p.id, p.full_name, g.name "
+                   "pfw.role, p.id, p.full_name, g.name , g.id as genre_id "
                    "FROM content.film_work fw "
                    "LEFT JOIN content.person_film_work pfw "
                    "ON pfw.film_work_id = fw.id "
@@ -113,8 +113,12 @@ class PGFilmWork(PGConnectorBase):
             if not data:
                 data = FilmElastick(**mv.dict())
 
-            if mv.ganre_name:
-                data.genre.add(mv.ganre_name)
+            genre_name = mv.genre_name
+            if genre_name and genre_name not in data.genres_names:
+                genre = Genre(id=mv.genre_id, name=genre_name)
+                data.genres_names.append(genre_name)
+                data.genres.append(genre)
+
             if mv.role:
                 self.__add_role_person(mv.role, data, film)
 
@@ -123,20 +127,25 @@ class PGFilmWork(PGConnectorBase):
 
     @staticmethod
     def __add_role_person(role, data, film):
+        mapping_person = {
+            PersonRole.ACTOR.value: {
+                'names': data.actors_names,
+                'obj': data.actors
+            },
+            PersonRole.WRITER.value: {
+                'names': data.writers_names,
+                'obj': data.writers
+            },
+            PersonRole.DIRECTOR.value: {
+                'names': data.directors_names,
+                'obj': data.directors
+            },
+        }
         try:
             person = Person(**film)
         except Exception as e:
             logging.error(e)
-
-        if role == PersonRole.ACTOR:
-            if person.name not in data.actors_names:
-                data.actors_names.append(person.name)
-                data.actors.append(person)
-
-        if role == PersonRole.WRITER:
-            if person.name not in data.writers_names:
-                data.writers_names.append(person.name)
-                data.writers.append(person)
-
-        if role == PersonRole.DIRECTOR:
-            data.director.add(person.name)
+        data_mapping = mapping_person.get(role, None)
+        if data_mapping:
+            data_mapping['names'].append(person.name)
+            data_mapping['obj'].append(person)

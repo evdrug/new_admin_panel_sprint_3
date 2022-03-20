@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, List, Set
+from typing import Optional, List
 
 from pydantic import BaseModel
 from pydantic.fields import Field
@@ -8,6 +8,11 @@ from pydantic.fields import Field
 class Person(BaseModel):
     id: str
     name: str = Field(alias='full_name')
+
+
+class Genre(BaseModel):
+    id: str
+    name: str
 
 
 class FilmElastick(BaseModel):
@@ -19,8 +24,10 @@ class FilmElastick(BaseModel):
     actors_names: List = []
     writers: List[Person] = []
     writers_names: List = []
-    director: Set = set()
-    genre: Set = set()
+    directors: List[Person] = []
+    directors_names: List = []
+    genres: List[Genre] = []
+    genres_names: List = []
 
 
 class RawMovies(BaseModel):
@@ -34,4 +41,5 @@ class RawMovies(BaseModel):
     role: Optional[str]
     person_id: Optional[str] = Field(alias='id')
     person_name: Optional[str] = Field(alias='full_name')
-    ganre_name: Optional[str] = Field(alias='name')
+    genre_id: Optional[str] = Field(alias='genre_id')
+    genre_name: Optional[str] = Field(alias='name')

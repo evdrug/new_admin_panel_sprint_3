@@ -84,16 +84,43 @@ index_settings_elastic = {
                 "type": "text",
                 "analyzer": "ru_en"
             },
+            "directors": {
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": {
+                    "id": {
+                        "type": "keyword"
+                    },
+                    "name": {
+                        "type": "text",
+                        "analyzer": "ru_en"
+                    }
+                }
+            },
+            "directors_names": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
             "description": {
                 "type": "text",
                 "analyzer": "ru_en"
             },
-            "director": {
+            "genres": {
+                "type": "nested",
+                "dynamic": "strict",
+                "properties": {
+                    "id": {
+                        "type": "keyword"
+                    },
+                    "name": {
+                        "type": "text",
+                        "analyzer": "ru_en"
+                    }
+                }
+            },
+            "genres_names": {
                 "type": "text",
                 "analyzer": "ru_en"
-            },
-            "genre": {
-                "type": "keyword"
             },
             "id": {
                 "type": "keyword"
