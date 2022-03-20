@@ -62,7 +62,52 @@ class PersonRole(Enum):
     DIRECTOR = 'director'
 
 
-index_settings_elastic = {
+index_settings = {
+    "index": {
+        "refresh_interval": "1s",
+        "number_of_shards": "1",
+        "analysis": {
+            "filter": {
+                "russian_stemmer": {
+                    "type": "stemmer",
+                    "language": "russian"
+                },
+                "english_stemmer": {
+                    "type": "stemmer",
+                    "language": "english"
+                },
+                "english_possessive_stemmer": {
+                    "type": "stemmer",
+                    "language": "possessive_english"
+                },
+                "russian_stop": {
+                    "type": "stop",
+                    "stopwords": "_russian_"
+                },
+                "english_stop": {
+                    "type": "stop",
+                    "stopwords": "_english_"
+                }
+            },
+            "analyzer": {
+                "ru_en": {
+                    "filter": [
+                        "lowercase",
+                        "english_stop",
+                        "english_stemmer",
+                        "english_possessive_stemmer",
+                        "russian_stop",
+                        "russian_stemmer"
+                    ],
+                    "tokenizer": "standard"
+                }
+            }
+        },
+        "number_of_replicas": "1",
+    }
+}
+
+index_movies_settings_elastic = {
     "index": "movies",
     "mappings": {
         "dynamic": "strict",
@@ -156,48 +201,41 @@ index_settings_elastic = {
             }
         }
     },
-    "settings": {
-        "index": {
-            "refresh_interval": "1s",
-            "number_of_shards": "1",
-            "analysis": {
-                "filter": {
-                    "russian_stemmer": {
-                        "type": "stemmer",
-                        "language": "russian"
-                    },
-                    "english_stemmer": {
-                        "type": "stemmer",
-                        "language": "english"
-                    },
-                    "english_possessive_stemmer": {
-                        "type": "stemmer",
-                        "language": "possessive_english"
-                    },
-                    "russian_stop": {
-                        "type": "stop",
-                        "stopwords": "_russian_"
-                    },
-                    "english_stop": {
-                        "type": "stop",
-                        "stopwords": "_english_"
-                    }
-                },
-                "analyzer": {
-                    "ru_en": {
-                        "filter": [
-                            "lowercase",
-                            "english_stop",
-                            "english_stemmer",
-                            "english_possessive_stemmer",
-                            "russian_stop",
-                            "russian_stemmer"
-                        ],
-                        "tokenizer": "standard"
-                    }
-                }
+    "settings": index_settings
+}
+index_persons_settings_elastic = {
+    "index": "persons",
+    "mappings": {
+        "dynamic": "strict",
+        "properties": {
+            "id": {
+                "type": "keyword"
             },
-            "number_of_replicas": "1",
+            "name": {
+                "type": "text",
+                "analyzer": "ru_en"
+            },
+            "role": {
+                "type": "keyword"
+            },
+            "film_ids": {
+                "type": "keyword"
+            },
         }
-    }
+    },
+    "settings": index_settings
+}
+# index_genres_settings_elastic = {
+#     "index": "genres",
+#     "mappings": {
+#         "dynamic": "strict",
+#         "properties": {}
+#     },
+#     "settings": index_settings
+# }
+
+
+elastic_index = {
+    'movies': index_movies_settings_elastic,
+    'persons': index_persons_settings_elastic
 }

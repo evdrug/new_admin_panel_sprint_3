@@ -9,7 +9,7 @@ from time import sleep
 from config import DEFAULT_DATE, CHUNK_SIZE
 from config import LOG_CONFIG, TUME_TO_RESTART
 from utils.elastic_db import ELFilm
-from utils.postgres_db import PGFilmWork
+from utils.postgres_db import PGFilmWork, transform_film, transform_persons
 from utils.state import State, RedisStorage
 
 config.dictConfig(LOG_CONFIG)
@@ -39,15 +39,29 @@ def loader_es(state: State, pg: PGFilmWork, table: dict, es: ELFilm):
                                                offset_start):
         date_end = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         offset_start += limit
-        if table['func_film_id']:
+        if table.get('func_film_id', None):
             film_modified_ids = pg.get_film_id_in_table(table_name,
                                                         [item['id'] for item in
                                                          modified_ids])
         else:
             film_modified_ids = modified_ids
+
+        transform_personal_index = table.get('transform_personal_index', None)
+        if transform_personal_index:
+            get_data = transform_personal_index['get_data'](
+                [item['id'] for item in modified_ids]
+            )
+            serialize_data_index = transform_personal_index['func_transform'](
+                get_data
+            )
+            es.set_bulk(
+                transform_personal_index['index_name'],
+                serialize_data_index.values()
+            )
+
         film_result = pg.get_film_data(
             [item['id'] for item in film_modified_ids])
-        film_serialize = pg.transform(film_result)
+        film_serialize = transform_film(film_result)
 
         es.set_bulk('movies', film_serialize.values())
         state.set_state(table['name'], json.dumps(
@@ -56,10 +70,24 @@ def loader_es(state: State, pg: PGFilmWork, table: dict, es: ELFilm):
 
 
 def process(state: State, pg: PGFilmWork, es: ELFilm) -> None:
+    transform_index = {
+        'persons': {
+            'func_transform': transform_persons,
+            'get_data': pg.get_person_data,
+            'index_name': 'persons',
+        }
+    }
+
     tables_pg = [
-        {'name': 'genre', 'func_film_id': True},
-        {'name': 'person', 'func_film_id': True},
-        {'name': 'film_work', 'func_film_id': None},
+        {
+            'name': 'genre',
+            'func_film_id': True
+        },
+        {
+            'name': 'person',
+            'func_film_id': True,
+            'transform_personal_index': transform_index.get('persons', None)},
+        {'name': 'film_work'},
 
     ]
 
