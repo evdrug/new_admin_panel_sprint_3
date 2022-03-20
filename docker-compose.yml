@@ -83,7 +83,7 @@ services:
       - ./config/nginx/movies.conf:/etc/nginx/conf.d/default.conf:ro
       - ./app_movies:/var/www/app
     ports:
-      - "80:81"
+      - "81:80"
     depends_on:
       - db
       - app_movies
