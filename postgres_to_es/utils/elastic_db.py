@@ -8,7 +8,7 @@ from utils.backoff import backoff
 
 from config import EL_DSL
 from config import LOG_CONFIG
-from config import index_settings_elastic
+from config import elastic_index
 
 config.dictConfig(LOG_CONFIG)
 
@@ -20,13 +20,17 @@ class ELConnectorBase:
     @backoff(logging=logging)
     def connect(self):
         self.client = Elasticsearch(**EL_DSL)
-        if not self.client.indices.exists(
-                index=index_settings_elastic['index']
-        ):
-            self.client.indices.create(
-                **index_settings_elastic,
-                ignore=400
-            )
+        self.__check_and_create_index()
+
+    def __check_and_create_index(self):
+        for name, index_setting in elastic_index.items():
+            if not self.client.indices.exists(
+                    index=name
+            ):
+                self.client.indices.create(
+                    **index_setting,
+                    ignore=400
+                )
 
     def __del__(self):
         if self.client:

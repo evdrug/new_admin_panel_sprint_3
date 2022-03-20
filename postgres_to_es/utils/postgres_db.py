@@ -4,15 +4,41 @@ from logging import config
 from typing import List, Dict
 
 import psycopg2
-from models import RawMovies, FilmElastick, Person, Genre
 from psycopg2.extras import RealDictCursor, RealDictRow
 from utils.backoff import backoff
 
 from config import LOG_CONFIG
 from config import PG_DSL
 from config import PersonRole
+from models import RawMovies, FilmElastick, Person, Genre, PersonElastic, \
+    PersonRaw
 
 config.dictConfig(LOG_CONFIG)
+
+
+def add_role_person(role, data, film):
+    mapping_person = {
+        PersonRole.ACTOR.value: {
+            'names': data.actors_names,
+            'obj': data.actors
+        },
+        PersonRole.WRITER.value: {
+            'names': data.writers_names,
+            'obj': data.writers
+        },
+        PersonRole.DIRECTOR.value: {
+            'names': data.directors_names,
+            'obj': data.directors
+        },
+    }
+    try:
+        person = Person(**film)
+    except Exception as e:
+        logging.error(e)
+    data_mapping = mapping_person.get(role, None)
+    if data_mapping:
+        data_mapping['names'].append(person.name)
+        data_mapping['obj'].append(person)
 
 
 class PGConnectorBase:
@@ -68,6 +94,20 @@ class PGFilmWork(PGConnectorBase):
             if len(table_id) != limit:
                 break
 
+    def get_person_data(self, ids: List) -> List[RealDictRow]:
+        sql_tmp = (
+            "select p.id, full_name, pfw.role, pfw.film_work_id "
+            "from content.person p "
+            "join content.person_film_work pfw on p.id = pfw.person_id "
+            "WHERE p.id IN %(persons_ids)s"
+        )
+
+        sql = self.cursor.mogrify(sql_tmp, {
+            'persons_ids': tuple(ids)
+        })
+        result = self.query(sql)
+        return result
+
     def get_film_data(self, film_ids: List):
         sql_tmp = ("SELECT fw.id as fw_id, fw.title, fw.description, "
                    "fw.rating, fw.type, fw.created, fw.modified, "
@@ -99,53 +139,49 @@ class PGFilmWork(PGConnectorBase):
         result = self.query(sql)
         return result
 
-    # думаю с backoff не очень хорошая идея, застрянем в цикле и ничего не добавим
-    def transform(self, films_raw: List[RealDictRow]) -> Dict:
-        result = defaultdict(dict)
-        for film in films_raw:
-            try:
-                mv = RawMovies(**film)
-            except Exception as e:
-                logging.error(e)
-                continue
-            id = mv.fw_id
-            data = result[id]
-            if not data:
-                data = FilmElastick(**mv.dict())
 
-            genre_name = mv.genre_name
-            if genre_name and genre_name not in data.genres_names:
-                genre = Genre(id=mv.genre_id, name=genre_name)
-                data.genres_names.append(genre_name)
-                data.genres.append(genre)
 
-            if mv.role:
-                self.__add_role_person(mv.role, data, film)
-
-            result[id] = data
-        return result
-
-    @staticmethod
-    def __add_role_person(role, data, film):
-        mapping_person = {
-            PersonRole.ACTOR.value: {
-                'names': data.actors_names,
-                'obj': data.actors
-            },
-            PersonRole.WRITER.value: {
-                'names': data.writers_names,
-                'obj': data.writers
-            },
-            PersonRole.DIRECTOR.value: {
-                'names': data.directors_names,
-                'obj': data.directors
-            },
-        }
+def transform_film(films_raw: List[RealDictRow]) -> Dict:
+    result = defaultdict(dict)
+    for film in films_raw:
         try:
-            person = Person(**film)
+            mv = RawMovies(**film)
         except Exception as e:
             logging.error(e)
-        data_mapping = mapping_person.get(role, None)
-        if data_mapping:
-            data_mapping['names'].append(person.name)
-            data_mapping['obj'].append(person)
+            continue
+        id = mv.fw_id
+        data = result[id]
+        if not data:
+            data = FilmElastick(**mv.dict())
+
+        genre_name = mv.genre_name
+        if genre_name and genre_name not in data.genres_names:
+            genre = Genre(id=mv.genre_id, name=genre_name)
+            data.genres_names.append(genre_name)
+            data.genres.append(genre)
+
+        if mv.role:
+            add_role_person(mv.role, data, film)
+
+        result[id] = data
+    return result
+
+
+def transform_persons(
+        get_data: List[RealDictRow],
+) -> List:
+    result = defaultdict(dict)
+    for person in get_data:
+        try:
+            p_raw = PersonRaw(**person)
+        except Exception as e:
+            logging.error(e)
+            continue
+        id = p_raw.id
+        data = result[id]
+        if not data:
+            data = PersonElastic(**p_raw.dict())
+        data.role.add(p_raw.role_raw)
+        data.film_ids.add(p_raw.film_work_id)
+        result[id] = data
+    return result

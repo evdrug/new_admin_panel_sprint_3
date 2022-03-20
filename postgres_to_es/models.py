@@ -1,5 +1,6 @@
 import datetime
-from typing import Optional, List
+from typing import Optional, List, Set
+from uuid import UUID
 
 from pydantic import BaseModel
 from pydantic.fields import Field
@@ -8,6 +9,17 @@ from pydantic.fields import Field
 class Person(BaseModel):
     id: str
     name: str = Field(alias='full_name')
+
+
+class PersonRaw(Person):
+    role_raw: str = Field(alias='role')
+    film_work_id: str
+
+class PersonElastic(Person):
+    name: str
+    role: Set[str] = set()
+    film_ids: Set[str] = set()
+
 
 
 class Genre(BaseModel):
