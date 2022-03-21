@@ -216,9 +216,8 @@ index_persons_settings_elastic = {
                 "type": "text",
                 "analyzer": "ru_en"
             },
-            "description": {
-                "type": "text",
-                "analyzer": "ru_en"
+            "role": {
+                "type": "keyword"
             },
             "film_ids": {
                 "type": "keyword"
@@ -240,8 +239,9 @@ index_genres_settings_elastic = {
                 "type": "text",
                 "analyzer": "ru_en"
             },
-            "role": {
-                "type": "keyword"
+            "description": {
+                "type": "text",
+                "analyzer": "ru_en"
             },
             "film_ids": {
                 "type": "keyword"
@@ -250,7 +250,6 @@ index_genres_settings_elastic = {
     },
     "settings": index_settings
 }
-
 
 elastic_index = {
     'movies': index_movies_settings_elastic,
