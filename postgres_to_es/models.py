@@ -12,8 +12,8 @@ class Person(BaseModel):
 
 
 class PersonRaw(Person):
-    role_raw: str = Field(alias='role')
-    film_work_id: str
+    role_raw: Optional[str] = Field(alias='role')
+    film_work_id: Optional[str]
 
 class PersonElastic(Person):
     name: str

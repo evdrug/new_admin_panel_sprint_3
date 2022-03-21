@@ -59,11 +59,12 @@ def loader_es(state: State, pg: PGFilmWork, table: dict, es: ELFilm):
                 serialize_data_index.values()
             )
 
+
         film_result = pg.get_film_data(
             [item['id'] for item in film_modified_ids])
-        film_serialize = transform_film(film_result)
-
-        es.set_bulk('movies', film_serialize.values())
+        if film_result:
+            film_serialize = transform_film(film_result)
+            es.set_bulk('movies', film_serialize.values())
         state.set_state(table['name'], json.dumps(
             {'offset': offset_start, 'date': date_start}))
     state.set_state(table['name'], json.dumps({'offset': 0, 'date': date_end}))

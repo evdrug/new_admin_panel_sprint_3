@@ -98,7 +98,7 @@ class PGFilmWork(PGConnectorBase):
         sql_tmp = (
             "select p.id, full_name, pfw.role, pfw.film_work_id "
             "from content.person p "
-            "join content.person_film_work pfw on p.id = pfw.person_id "
+            "left join content.person_film_work pfw on p.id = pfw.person_id "
             "WHERE p.id IN %(persons_ids)s"
         )
 
@@ -109,6 +109,8 @@ class PGFilmWork(PGConnectorBase):
         return result
 
     def get_film_data(self, film_ids: List):
+        if not film_ids:
+            return None
         sql_tmp = ("SELECT fw.id as fw_id, fw.title, fw.description, "
                    "fw.rating, fw.type, fw.created, fw.modified, "
                    "pfw.role, p.id, p.full_name, g.name , g.id as genre_id "
