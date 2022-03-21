@@ -5,13 +5,13 @@ from typing import List, Dict
 
 import psycopg2
 from psycopg2.extras import RealDictCursor, RealDictRow
-from utils.backoff import backoff
 
 from config import LOG_CONFIG
 from config import PG_DSL
 from config import PersonRole
-from models import RawMovies, FilmElastick, Person, Genre, PersonElastic, \
-    PersonRaw
+from models import (RawMovies, FilmElastick, Person, PersonElastic,
+                    PersonRaw, Genre, GenreRaw, GenreElastic)
+from utils.backoff import backoff
 
 config.dictConfig(LOG_CONFIG)
 
@@ -108,6 +108,20 @@ class PGFilmWork(PGConnectorBase):
         result = self.query(sql)
         return result
 
+    def get_genre_data(self, ids: List) -> List[RealDictRow]:
+        sql_tmp = (
+            "select g.id, g.name, g.description, gfw.film_work_id "
+            "from content.genre g "
+            "join content.genre_film_work gfw on g.id = gfw.genre_id "
+            "WHERE g.id IN %(genres_ids)s"
+        )
+
+        sql = self.cursor.mogrify(sql_tmp, {
+            'genres_ids': tuple(ids)
+        })
+        result = self.query(sql)
+        return result
+
     def get_film_data(self, film_ids: List):
         if not film_ids:
             return None
@@ -140,7 +154,6 @@ class PGFilmWork(PGConnectorBase):
         sql = self.cursor.mogrify(sql_tmp, {'ids': tuple(table_ids)})
         result = self.query(sql)
         return result
-
 
 
 def transform_film(films_raw: List[RealDictRow]) -> Dict:
@@ -185,5 +198,25 @@ def transform_persons(
             data = PersonElastic(**p_raw.dict())
         data.role.add(p_raw.role_raw)
         data.film_ids.add(p_raw.film_work_id)
+        result[id] = data
+    return result
+
+
+def transform_genres(
+        get_data: List[RealDictRow],
+) -> List:
+    result = defaultdict(dict)
+    for genre in get_data:
+        try:
+            genre_raw = GenreRaw(**genre)
+        except Exception as e:
+            logging.error(e)
+            continue
+        id = genre_raw.id
+        data = result[id]
+        if not data:
+            data = GenreElastic(**genre_raw.dict())
+        data.description = genre_raw.description
+        data.film_ids.add(genre_raw.film_work_id)
         result[id] = data
     return result

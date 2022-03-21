@@ -9,7 +9,8 @@ from time import sleep
 from config import DEFAULT_DATE, CHUNK_SIZE
 from config import LOG_CONFIG, TUME_TO_RESTART
 from utils.elastic_db import ELFilm
-from utils.postgres_db import PGFilmWork, transform_film, transform_persons
+from utils.postgres_db import (PGFilmWork, transform_film,
+                               transform_persons, transform_genres)
 from utils.state import State, RedisStorage
 
 config.dictConfig(LOG_CONFIG)
@@ -76,19 +77,28 @@ def process(state: State, pg: PGFilmWork, es: ELFilm) -> None:
             'func_transform': transform_persons,
             'get_data': pg.get_person_data,
             'index_name': 'persons',
+        },
+        'genres': {
+            'func_transform': transform_genres,
+            'get_data': pg.get_genre_data,
+            'index_name': 'genres',
         }
     }
 
     tables_pg = [
         {
             'name': 'genre',
-            'func_film_id': True
+            'func_film_id': True,
+            'transform_personal_index': transform_index.get('genres', None)
         },
         {
             'name': 'person',
             'func_film_id': True,
-            'transform_personal_index': transform_index.get('persons', None)},
-        {'name': 'film_work'},
+            'transform_personal_index': transform_index.get('persons', None)
+        },
+        {
+            'name': 'film_work'
+        },
 
     ]
 
