@@ -15,16 +15,26 @@ class PersonRaw(Person):
     role_raw: str = Field(alias='role')
     film_work_id: str
 
+
 class PersonElastic(Person):
     name: str
     role: Set[str] = set()
     film_ids: Set[str] = set()
 
 
-
 class Genre(BaseModel):
     id: str
     name: str
+
+
+class GenreRaw(Genre):
+    description: Optional[str]
+    film_work_id: str
+
+
+class GenreElastic(Genre):
+    description: Optional[str]
+    film_ids: Set[str] = set()
 
 
 class FilmElastick(BaseModel):
