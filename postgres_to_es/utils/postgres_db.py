@@ -37,8 +37,9 @@ def add_role_person(role, data, film):
         logging.error(e)
     data_mapping = mapping_person.get(role, None)
     if data_mapping:
-        data_mapping['names'].append(person.name)
-        data_mapping['obj'].append(person)
+        if person.name not in data_mapping['names']:
+            data_mapping['names'].add(person.name)
+            data_mapping['obj'].append(person)
 
 
 class PGConnectorBase:

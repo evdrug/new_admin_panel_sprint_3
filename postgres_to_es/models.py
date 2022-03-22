@@ -43,11 +43,11 @@ class FilmElastick(BaseModel):
     description: Optional[str]
     imdb_rating: Optional[float] = Field(alias='rating', default=0)
     actors: List[Person] = []
-    actors_names: List = []
+    actors_names: Set = set()
     writers: List[Person] = []
-    writers_names: List = []
+    writers_names: Set = set()
     directors: List[Person] = []
-    directors_names: List = []
+    directors_names: Set = set()
     genres: List[Genre] = []
     genres_names: List = []
 
